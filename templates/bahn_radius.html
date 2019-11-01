@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<title>Bahn Form </title>
+
+</head>
+
+
+
+<body>
+<form action="http://192.168.0.20:5000/bahn/api/radius/html" method="get">
+  <div>
+    <label for="name">Start City:</label>
+    <input type="text" id="city" name="start_station">
+  </div>
+  <div>
+    <label for="name">Radius:</label>
+    <input type="text" id="rad" name="radius">
+  </div>
+    <div>
+    <label for="name">City Inhabitants:</label>
+    <input type="text" id="rad" name="radius">
+  </div>
+    <div>
+    <label for="name">Outward Start:</label>
+    <input type="datetime-local" id="out_start" name="start_date_towards">
+  </div>
+  <div>
+    <label for="name">Outward End:</label>
+    <input type="datetime-local" id="out_end" name="end_date_towards">
+  </div>
+  <div>
+    <label for="name">Backward Start:</label>
+    <input type="datetime-local" id="back_start" name="start_date_back">
+  </div>
+  <div>
+    <label for="name">Backward End:</label>
+    <input type="datetime-local" id="back_end" name="end_date_back">
+  </div>
+  <div>
+    <label for="name">Max Duration:</label>
+    <input type="number" id="max_dur" name="max_duration">
+  </div>
+
+  <div class="button">
+    <button type="submit">Find Connections</button>
+  </div>
+</form>
+<script src="{{ url_for('static', filename = 'setDates.js') }}"></script>
+</body>
+
+</html>
