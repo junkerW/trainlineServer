@@ -1,0 +1,7 @@
+venv
+*.txt
+preise.py
+.idea
+trainline_exec.py
+__pycache__
+*.egg.info
