@@ -2,20 +2,20 @@ from typing import List
 from datetime import datetime
 import trainline
 import logging
-import asyncio
+from multiprocessing import Pool
 
 from roundtrip import RoundTrip, Trip
 
 
 class TrainlineFinder:
-
     logger = None
 
     def __init__(self, logger: logging.Logger):
         self.logger = logger
 
-    async def get_trainline(self, trip: Trip, bus=True, train=True):
+    def get_trainline(self, trip: Trip, bus=True, train=True):
         # for destination in destinations:
+        self.logger.info("Finding connections for " + trip.destination)
         transport = None
         if bus and train:
             transport = None
@@ -38,7 +38,6 @@ class TrainlineFinder:
         return {'Start': trip.start_station,
                 'Destination': trip.destination,
                 'Connections': self._csv2dict(result.csv())}
-
 
     def _csv2dict(self, csv_str: str):
         rows = csv_str.split('\n')
@@ -101,45 +100,42 @@ class TrainlineFinder:
 
         return sorted(rounds, key=lambda k: k['price'] if k['price'] is not None else 1000)
 
-    def _create_round_tasks(self, round_trip: RoundTrip, train: bool, bus: bool):
-        destination = round_trip.trip_there.destination
-        self.logger.info("Finding connections for " + destination)
-        round_tasks = []
-        try:
-            round_tasks.append(asyncio.create_task(self.get_trainline(round_trip.trip_there, bus=bus, train=train)))
-        except Exception as e:
-            self.logger.error(e)
-
-        try:
-            round_tasks.append(asyncio.create_task(self.get_trainline(round_trip.trip_back, bus=bus, train=train)))
-        except Exception as e:
-            self.logger.error(e)
-        return round_tasks
-
-    async def _run_destination_tasks(self, start_station, city_list, start_date_towards: datetime, end_date_towards: datetime,
-                                 start_date_back:datetime, end_date_back:datetime, bus=True, train=True):
-        round_tasks = []
-
+    def _run_destination_tasks(self, start_station, city_list, start_date_towards: datetime,
+                               end_date_towards: datetime,
+                               start_date_back: datetime, end_date_back: datetime, bus=True, train=True):
+        round_trips = []
         for destination in city_list:  # Loop over all destinations
-            round_trip = RoundTrip(start_station, destination,
-                                   start_date_towards, end_date_towards, start_date_back, end_date_back)
-            round_tasks.append(self._create_round_tasks(round_trip, bus=bus, train=train))
+            round_trips.append([Trip(start_station, destination,
+                                     start_date_towards, end_date_towards), bus,
+                                train])
+            round_trips.append([Trip(destination, start_station,
+                                     start_date_back, end_date_back), bus,
+                                train])
 
-        for round_task in round_tasks:
-  #          for trip_task in round_task:
-            result = await asyncio.gather(*asyncio.gather(*round_task))
-        return result
+        with Pool(processes=20) as pool:
+            results = pool.starmap(self.get_trainline, [trip for trip in round_trips])
+        # round_tasks.append(self._create_round_tasks(round_trip, bus=bus, train=train))
 
-    def find_cheapest_roundtrips(self, start_station, city_list, start_date_towards: datetime, end_date_towards: datetime,
-                                 start_date_back:datetime, end_date_back:datetime, max_duration: int = 24 * 60, bus=True, train=True):
+        # for trip_task in round_task:
+        # result = await asyncio.gather(*asyncio.gather(*round_task))
+        # results = []
+        # for trip_tasks in round_tasks:
+        #     for trip in trip_tasks:
+        #         results.append(trip.)
+        return results
 
-        results_there = []
-        results_back = []
+    def find_cheapest_roundtrips(self, start_station, city_list, start_date_towards: datetime,
+                                 end_date_towards: datetime,
+                                 start_date_back: datetime, end_date_back: datetime, max_duration: int = 24 * 60,
+                                 bus=True, train=True):
 
-        results = asyncio.run(
-            self._run_destination_tasks(start_station, city_list,
-                                        start_date_towards, end_date_towards, start_date_back, end_date_back))
 
+        round_trips = self._run_destination_tasks(start_station, city_list,
+                                                  start_date_towards, end_date_towards, start_date_back, end_date_back,
+                                                  bus=bus, train=train)
+
+        results_there = [trip for trip in round_trips if trip['Start'] == start_station]
+        results_back = [trip for trip in round_trips if trip['Destination'] == start_station]
         results_there_filtered = []
         results_back_filtered = []
 
@@ -162,11 +158,9 @@ class TrainlineFinder:
         for result_back in results_back_filtered:
             results_back_sorted.append(self._sort_price(result_back))
 
-        #pprint.pprint(results_there_sorted)
-        #pprint.pprint(results_back_sorted)
+        # pprint.pprint(results_there_sorted)
+        # pprint.pprint(results_back_sorted)
 
         self.logger.debug("\nFinding cheapest Roundtrip")
 
         return self._filter_cheapest_round(results_there_sorted, results_back_sorted)
-
-
