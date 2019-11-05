@@ -8,10 +8,8 @@
 
 </head>
 
-
-
 <body>
-<form action="http://192.168.0.20:5000/bahn/api/list/html" method="get">
+<form action="http://{{ host }}:{{ port }}/bahn/api/list/html" method="get">
   <div>
     <label for="city">Start City:</label>
     <input type="text" id="city" name="start_station">

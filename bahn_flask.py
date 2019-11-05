@@ -4,9 +4,34 @@ import trainline_finder as train
 from json2html import *
 from datetime import datetime
 import json
-
+import socket
+import logging
 
 app = Flask(__name__)
+
+hostName = socket.gethostname()
+hostIP = socket.gethostbyname(hostName)
+port = 5000
+
+logger = app.logger
+logger.setLevel('INFO')
+fh = logging.FileHandler('/var/log/bahn/log.log')
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+fh.setFormatter(formatter)
+logger.addHandler(fh)
+
+train = train.TrainlineFinder(logger)
+
+def get_ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(('10.255.255.255',1))
+        IP = s.getsockname()[0]
+    except:
+        IP = '127.0.0.1'
+    finally:
+        s.close()
+    return IP
 
 
 def encode(string:str):
@@ -20,7 +45,7 @@ def hello():
 
 @app.route('/bahn/list')
 def bahn_raw():
- return render_template('bahn.html')
+ return render_template('bahn.html', host=get_ip(), port=port)
 
 
 @app.route('/bahn/radius/')
@@ -52,8 +77,13 @@ def bahn_post(ret_type):
     if transport == 'bus':
         trains = False
 
-    final = train.find_cheapest_connections(start_station, destinations, start_date_towards, end_date_towards,
-                                            start_date_back, end_date_back, max_duration, bus=bus, train=trains)
+    try:
+        final = train.find_cheapest_roundtrips(start_station, destinations, start_date_towards, end_date_towards,
+                                               start_date_back, end_date_back, max_duration, bus=bus, train=trains)
+    except Exception as e:
+        logger.error("Error finding Connection: {}".format(e))
+        return "Error finding Connections", 500
+
 
     if ret_type == 'json':
         return json.dumps(final)
@@ -61,4 +91,11 @@ def bahn_post(ret_type):
         return json2html.convert(json=final)
 
 
-app.run(host='0.0.0.0')
+logger.info("Starting Bahn Flask app on {}:{}".format(get_ip(), port))
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=port)
+else:
+    gunicorn_logger = logging.getLogger('gunicorn.error')
+    app.logger.handlers = gunicorn_logger.handlers
+    app.logger.setLevel(gunicorn_logger.level)
+

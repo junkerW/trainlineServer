@@ -7,5 +7,9 @@ setup(
    author='Sebastian',
    author_email='sebastian.wenzel@gmx.net',
    packages=['bahn'],  #same as name
-   install_requires=['Flask', 'trainline'], #external packages as dependencies
+   install_requires=[
+      'Flask',
+      'trainline@git+https://github.com/junkerW/trainline-python.git',
+      'json2html'
+      ],  #external packages as dependencies
 )
