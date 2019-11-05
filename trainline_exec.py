@@ -1,4 +1,4 @@
-import trainline_finder as train
+from bahn import trainline_finder as train
 import pprint
 
 start_date_towards = "01/11/2019 09:00"

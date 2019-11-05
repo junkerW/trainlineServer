@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from flask import Flask, request, render_template
-import trainline_finder as train
+from bahn import trainline_finder as train
 from json2html import *
 from datetime import datetime
 import json

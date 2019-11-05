@@ -4,7 +4,7 @@ import trainline
 import logging
 from multiprocessing import Pool
 
-from roundtrip import RoundTrip, Trip
+from bahn.roundtrip import Trip
 
 
 class TrainlineFinder:
